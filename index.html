@@ -65,6 +65,15 @@ h1 .hl{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--accent
 .sync.off .dot{background:var(--warn)}.sync.err .dot{background:var(--bad)}
 @keyframes pulse{50%{opacity:.3}}
 .room-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gear{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 12px;font-size:13px;color:var(--ink)}
+.set-sec{display:flex;flex-direction:column;gap:8px;padding-block:12px;border-top:1px solid var(--line)}
+.set-sec h3{margin:0;font-size:15px;font-family:var(--f-display);font-weight:400}
+.set-sec p{margin:0;font-size:13px;color:var(--muted)}
+.set-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.log{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.log b{font-family:var(--f-mono);font-size:13px}
+.log ul{margin:2px 0 0;padding-left:20px;color:var(--muted)}
+.ver{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .icons{display:flex;gap:6px;flex-wrap:wrap}
 .icons button{font-size:24px;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2)}
 .icons button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
@@ -200,7 +209,7 @@ function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}
 let state=load()||sample();
 if(!state.history)state.history={};
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast('存不進去：空間可能滿了，刪掉幾張照片再試');return false}}
-function save(){const ok=saveLocal();if(ok){meta.dirty=true;saveMeta();schedulePush()}return ok}
+function save(){const ok=saveLocal();if(ok){meta.dirty=true;meta.needBackup=true;saveMeta();schedulePush();scheduleBackup()}return ok}
 
 /* ---------- 聯網同步（Google 試算表） ---------- */
 const SYNC_URL='https://script.google.com/macros/s/AKfycbzBHMpJu4cC3XOY2POR0_xrtkaJJEebkr0LRVxafdR3P_q-wqaPikrfHTwNCw4sfPqaGw/exec';
@@ -209,7 +218,7 @@ let meta={pw:'',base:0,dirty:false,skip:false};
 try{Object.assign(meta,JSON.parse(localStorage.getItem(MKEY)||'{}'))}catch(e){}
 function saveMeta(){try{localStorage.setItem(MKEY,JSON.stringify(meta))}catch(e){}}
 let syncState={cls:'',txt:'尚未同步'},pushTimer,busy=false,pendingPush=false;
-function setSync(cls,txt){syncState={cls,txt};const el=document.getElementById('syncChip');if(el){el.className='sync '+cls;el.querySelector('span:last-child').textContent=txt}}
+function setSync(cls,txt){syncState={cls,txt};if(cls==='ok'){meta.lastSync=Date.now();saveMeta()}const el=document.getElementById('syncChip');if(el){el.className='sync '+cls;el.querySelector('span:last-child').textContent=txt}}
 async function call(body){
   const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify(Object.assign({pw:meta.pw},body))});
   return r.json();
@@ -251,8 +260,20 @@ async function push(){
   finally{busy=false;if(pendingPush){pendingPush=false;push()}}
 }
 function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(push,1500)}
+/* 自動備份：停止操作 5 分鐘、或離開網頁時，把雲端資料備份一份 */
+const IDLE_MS=5*60*1000;let backupTimer;
+function scheduleBackup(){clearTimeout(backupTimer);backupTimer=setTimeout(()=>backup(),IDLE_MS)}
+async function backup(leaving){
+  if(!meta.pw||meta.skip||!meta.needBackup)return;
+  if(meta.dirty){if(!leaving){await push();if(meta.dirty){scheduleBackup();return}}else return}
+  const body=JSON.stringify({pw:meta.pw,action:'backup'});
+  if(leaving){try{navigator.sendBeacon(SYNC_URL,new Blob([body],{type:'text/plain'}));meta.needBackup=false;meta.lastBackup=Date.now();saveMeta()}catch(e){}return}
+  try{const res=await call({action:'backup'});if(res.ok){meta.needBackup=false;meta.lastBackup=res.time||Date.now();saveMeta()}}catch(e){scheduleBackup()}
+}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(meta.needBackup)scheduleBackup()},{passive:true}));
 window.addEventListener('online',()=>meta.dirty?push():pull());
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')meta.dirty?push():pull()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){meta.dirty?push():pull()}else backup(true)});
+window.addEventListener('pagehide',()=>backup(true));
 function pwSheet(msg){
   openSheet(`<h2>連上雲端同步</h2>
     <p style="margin:0;color:var(--muted);font-size:14px">輸入同步密碼後，手機、電腦都會看到同一份資料。第一次輸入的密碼會成為正式密碼，之後每台裝置都輸入同一個。</p>
@@ -288,10 +309,10 @@ function render(){
   const q=view.q.trim().toLowerCase();
   const total=state.items.reduce((s,i)=>s+(+i.qty||1),0);
   const alerts=state.items.filter(i=>expState(i));
-  let h=`<header class="top"><div class="skins"><span>換主題</span>${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
-    <div class="room-row"><h1><span class="hl">${esc(state.room)}</span></h1>
+  let h=`<header class="top"><div class="room-row"><h1><span class="hl">${esc(state.room)}</span></h1>
     <span class="room-meta"><span class="stats">${state.cabinets.length} 個櫃子 · ${state.items.length} 種東西 · 共 ${total} 件</span>
-    <button class="sync ${syncState.cls}" id="syncChip" type="button" title="點一下立即同步"><span class="dot"></span><span>${esc(syncState.txt)}</span></button></span></div>
+    <button class="sync ${syncState.cls}" id="syncChip" type="button" title="點一下立即同步"><span class="dot"></span><span>${esc(syncState.txt)}</span></button>
+    <button class="gear" id="gear" type="button">⚙️ 設定</button></span></div>
     <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" placeholder="找東西：例如 護照、電池…" value="${esc(view.q)}" autocomplete="off"></label></header>`;
   if(state.sample)h+=`<div class="notice"><span>現在看到的是範例東西，先玩玩看。</span><button class="btn small" id="clearSample" type="button">清掉範例，從空房間開始</button></div>`;
@@ -311,7 +332,7 @@ function render(){
   qi.addEventListener('input',()=>{view.q=qi.value;const p=qi.selectionStart;render();const n=document.getElementById('q');n.focus();try{n.setSelectionRange(p,p)}catch(e){}});
   bindCommon();
   document.getElementById('syncChip').onclick=()=>{if(!meta.pw)pwSheet();else meta.dirty?push():pull()};
-  app.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skin=b.dataset.skin;try{localStorage.setItem('alex-room-skin',skin)}catch(e){}applySkin();render()});
+  document.getElementById('gear').onclick=settingsSheet;
   const cs=document.getElementById('clearSample');
   if(cs)armable(cs,'再按一次：清空全部範例',()=>{state={room:state.room,cabinets:[],items:[],history:{}};save();render();toast('房間清空了，先新增一個櫃子吧')});
   const af=document.getElementById('addFromQ');if(af)af.onclick=()=>itemSheet(null,{name:view.q});
@@ -410,6 +431,65 @@ function itemSheet(it,pre){
     closeSheet();render();const c=cabById(rec.cab);toast(`已放進 ${c.code} ${c.name}`)};
   const del=$('f-del');if(del)armable(del,'再按一次確認刪除',()=>{state.items=state.items.filter(i=>i.id!==it.id);save();closeSheet();render();toast('已刪除')});
   if(isNew&&!d.name)setTimeout(()=>$('f-name').focus(),50);
+}
+const VERSION='1.3';
+const CHANGELOG=[
+  ['1.3','2026-11-03',['新增「設定」：同步狀態、主題、房間名稱、備份與還原、更新日誌','自動備份：停止操作 5 分鐘或離開網頁時，自動備份到雲端硬碟，可從設定還原']],
+  ['1.2','2026-11-03',['加入雲端同步：手機、電腦共用同一份資料','試算表「物品清單」分頁自動列出所有東西']],
+  ['1.1','2026-11-03',['五種主題：糖果、海洋、森林、太空、簡約','櫃子可以選圖示']],
+  ['1.0','2026-11-03',['第一版：新增櫃子、登記東西、搜尋、到期提醒、記住上次放哪']]
+];
+function fmtTime(t){if(!t)return'還沒有';const d=new Date(t);return d.toLocaleDateString('zh-TW')+' '+d.toTimeString().slice(0,5)}
+function settingsSheet(){
+  openSheet(`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2>設定</h2><span class="ver">v${VERSION}</span></div>
+    <section class="set-sec"><h3>☁️ 雲端同步</h3>
+      <p>狀態：${esc(syncState.txt)}　·　上次同步：${fmtTime(meta.lastSync)}</p>
+      <p>自動備份：停止操作 5 分鐘、或離開網頁時，會自動存一份到雲端硬碟「Alex房間備份」資料夾（保留最近 30 份）。上次備份：${fmtTime(meta.lastBackup)}</p>
+      <div class="set-row">${meta.pw?`<button class="btn small" id="st-sync" type="button">立即同步</button><button class="btn small" id="st-cloud" type="button">看雲端備份</button><button class="btn small" id="st-logout" type="button">這台裝置登出同步</button>`
+        :`<button class="btn small primary" id="st-login" type="button">輸入同步密碼</button>`}</div></section>
+    <div id="st-cloud-list" hidden></div>
+    <section class="set-sec"><h3>🎨 主題</h3>
+      <div class="skins">${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
+      <p>主題只會改這台裝置，不影響別人。</p></section>
+    <section class="set-sec"><h3>🏠 房間名稱</h3>
+      <div class="set-row"><input id="st-room" maxlength="20" value="${esc(state.room)}" style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:16px">
+      <button class="btn small" id="st-room-save" type="button">改名</button></div></section>
+    <section class="set-sec"><h3>💾 備份與還原</h3>
+      <p>除了雲端自動備份，也可以自己下載一份存在電腦裡。</p>
+      <div class="set-row"><button class="btn small" id="st-dl" type="button">下載備份檔</button>
+        <label class="btn small" style="cursor:pointer">從備份檔還原<input id="st-up" type="file" accept=".json,application/json" hidden></label></div>
+      <div class="hint" id="st-up-hint" hidden></div></section>
+    <section class="set-sec"><h3>🗑️ 清空房間</h3>
+      <p>刪掉所有櫃子和東西（雲端也會一起清空）。</p>
+      <div class="set-row"><button class="btn small danger" id="st-clear" type="button">清空全部</button></div></section>
+    <section class="set-sec"><h3>📝 更新日誌</h3><div class="log">${CHANGELOG.map(([v,d,list])=>`<div><b>v${v}</b>　<span class="ver">${d}</span><ul>${list.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div></section>
+    <div class="actions"><span class="right"><button class="btn primary" id="st-close" type="button">完成</button></span></div>`);
+  const $=id=>document.getElementById(id);
+  $('st-close').onclick=()=>{closeSheet();render()};
+  if($('st-sync'))$('st-sync').onclick=()=>{closeSheet();meta.dirty?push():pull()};
+  if($('st-cloud'))$('st-cloud').onclick=async()=>{const box=$('st-cloud-list');box.hidden=false;box.className='hint';box.textContent='讀取雲端備份中…';
+    try{const res=await call({action:'listBackups'});if(!res.ok){box.textContent=res.error||'讀不到備份';return}
+      if(!res.list.length){box.textContent='雲端還沒有備份，改過東西後過 5 分鐘就會有第一份';return}
+      box.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+res.list.map(b=>`<div class="set-row" style="justify-content:space-between"><span>${esc(fmtTime(b.time))}</span><button class="btn small" data-bk="${esc(b.id)}" type="button">還原這份</button></div>`).join('')+'</div>';
+      box.querySelectorAll('[data-bk]').forEach(btn=>armable(btn,'再按一次確認還原',async()=>{btn.textContent='還原中…';
+        try{const r2=await call({action:'getBackup',id:btn.dataset.bk});const d=r2.ok&&JSON.parse(r2.data);
+          if(!d||!Array.isArray(d.cabinets)){toast('這份備份讀不出來');return}
+          state=d;if(!state.history)state.history={};save();closeSheet();view.cab=null;render();toast('已從雲端備份還原')}catch(e){toast('還原失敗，請檢查網路')}}))}
+    catch(e){box.textContent='連不上網路'}};
+  if($('st-login'))$('st-login').onclick=()=>pwSheet();
+  if($('st-logout'))armable($('st-logout'),'再按一次：這台不再同步',()=>{meta.pw='';meta.skip=true;saveMeta();setSync('off','未同步（只存在這台）');settingsSheet();toast('這台裝置已登出同步')});
+  sheet.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skin=b.dataset.skin;try{localStorage.setItem('alex-room-skin',skin)}catch(e){}applySkin();
+    sheet.querySelectorAll('[data-skin]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+  $('st-room-save').onclick=()=>{const v=$('st-room').value.trim();if(!v){toast('名稱不能空白');return}state.room=v;save();toast('房間改名為「'+v+'」')};
+  $('st-dl').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,1)],{type:'application/json'});const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='Alex房間備份-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast('備份檔已下載')};
+  $('st-up').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{let d;
+    try{d=JSON.parse(rd.result)}catch(err){toast('這不是備份檔');return}
+    if(!d||!Array.isArray(d.cabinets)||!Array.isArray(d.items)){toast('這不是 Alex 房間的備份檔');return}
+    const h=$('st-up-hint');h.hidden=false;h.innerHTML=`備份裡有 ${d.cabinets.length} 個櫃子、${d.items.length} 種東西，會取代現在的全部資料。　<button class="btn small danger" id="st-up-ok" type="button">確定還原</button>`;
+    $('st-up-ok').onclick=()=>{state=d;if(!state.history)state.history={};save();closeSheet();render();toast('已從備份還原')}};rd.readAsText(f)};
+  armable($('st-clear'),'再按一次：真的全部清空',()=>{state={room:state.room,cabinets:[],items:[],history:{}};save();closeSheet();view.cab=null;render();toast('房間清空了')});
 }
 document.getElementById('fab').onclick=()=>itemSheet(null);
 render();
