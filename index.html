@@ -59,6 +59,12 @@ h1 .hl{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--accent
 .cab:hover{transform:translateY(-3px) rotate(-.6deg)!important}
 .item,.search,.notice,.empty{border-radius:calc(var(--radius) - 4px)!important}
 .btn{border-radius:99px!important}
+.sync{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 12px;font-size:13px;color:var(--muted)}
+.sync .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.ok .dot{background:#2fa36b}.sync.busy .dot{background:var(--accent);animation:pulse 1s infinite}
+.sync.off .dot{background:var(--warn)}.sync.err .dot{background:var(--bad)}
+@keyframes pulse{50%{opacity:.3}}
+.room-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .icons{display:flex;gap:6px;flex-wrap:wrap}
 .icons button{font-size:24px;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2)}
 .icons button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
@@ -193,7 +199,73 @@ function sample(){
 function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return null}
 let state=load()||sample();
 if(!state.history)state.history={};
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast('存不進去：空間可能滿了，刪掉幾張照片再試');return false}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast('存不進去：空間可能滿了，刪掉幾張照片再試');return false}}
+function save(){const ok=saveLocal();if(ok){meta.dirty=true;saveMeta();schedulePush()}return ok}
+
+/* ---------- 聯網同步（Google 試算表） ---------- */
+const SYNC_URL='https://script.google.com/macros/s/AKfycbzBHMpJu4cC3XOY2POR0_xrtkaJJEebkr0LRVxafdR3P_q-wqaPikrfHTwNCw4sfPqaGw/exec';
+const MKEY=KEY+'-sync';
+let meta={pw:'',base:0,dirty:false,skip:false};
+try{Object.assign(meta,JSON.parse(localStorage.getItem(MKEY)||'{}'))}catch(e){}
+function saveMeta(){try{localStorage.setItem(MKEY,JSON.stringify(meta))}catch(e){}}
+let syncState={cls:'',txt:'尚未同步'},pushTimer,busy=false,pendingPush=false;
+function setSync(cls,txt){syncState={cls,txt};const el=document.getElementById('syncChip');if(el){el.className='sync '+cls;el.querySelector('span:last-child').textContent=txt}}
+async function call(body){
+  const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify(Object.assign({pw:meta.pw},body))});
+  return r.json();
+}
+function adopt(res){
+  if(res.data){try{const d=JSON.parse(res.data);if(d&&d.cabinets){state=d;if(!state.history)state.history={};saveLocal()}}catch(e){}}
+  meta.base=res.updated||0;meta.dirty=false;saveMeta();
+  if(overlay.hidden)render();
+}
+function handleErr(res){
+  if(res&&/密碼/.test(res.error||'')){meta.pw='';saveMeta();setSync('err','密碼錯誤');pwSheet(res.error);return}
+  setSync('err',(res&&res.error)||'同步失敗');
+}
+async function pull(){
+  if(!meta.pw||busy)return;
+  if(!navigator.onLine){setSync('off','離線中，資料先存在這台');return}
+  busy=true;setSync('busy','同步中…');
+  try{
+    const res=await call({action:'load'});
+    if(!res.ok){handleErr(res);return}
+    if(!res.data){meta.dirty=true;busy=false;await push();return}
+    if(res.updated===meta.base){ if(meta.dirty){busy=false;await push();return} }
+    else{ if(meta.dirty)toast('別台裝置有更新，已換成最新資料'); adopt(res) }
+    setSync('ok','已同步');
+  }catch(e){setSync('off','連不上網路，稍後再同步')}
+  finally{busy=false}
+}
+async function push(){
+  if(!meta.pw||meta.skip)return;
+  if(busy){pendingPush=true;return}
+  if(!navigator.onLine){setSync('off','離線中，連上網會自動上傳');return}
+  busy=true;setSync('busy','上傳中…');
+  try{
+    const res=await call({action:'save',base:meta.base,data:JSON.stringify(state)});
+    if(res.ok){meta.base=res.updated;meta.dirty=false;saveMeta();setSync('ok','已同步')}
+    else if(res.conflict){toast('別台裝置剛改過，已換成最新資料');adopt(res);setSync('ok','已同步')}
+    else handleErr(res);
+  }catch(e){setSync('off','連不上網路，稍後再上傳')}
+  finally{busy=false;if(pendingPush){pendingPush=false;push()}}
+}
+function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(push,1500)}
+window.addEventListener('online',()=>meta.dirty?push():pull());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')meta.dirty?push():pull()});
+function pwSheet(msg){
+  openSheet(`<h2>連上雲端同步</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">輸入同步密碼後，手機、電腦都會看到同一份資料。第一次輸入的密碼會成為正式密碼，之後每台裝置都輸入同一個。</p>
+    ${msg?`<div class="hint" style="color:var(--bad)">${esc(msg)}，請再輸入一次</div>`:''}
+    <label class="field">同步密碼（至少 4 個字）<input id="s-pw" type="password" autocomplete="current-password"></label>
+    <div class="actions"><button class="btn" id="s-skip" type="button">先不要同步</button>
+      <span class="right"><button class="btn primary" id="s-ok" type="button">連線</button></span></div>`);
+  const i=document.getElementById('s-pw');setTimeout(()=>i.focus(),50);
+  const go=()=>{const v=i.value.trim();if(v.length<4){toast('密碼至少 4 個字');i.focus();return}
+    meta.pw=v;meta.skip=false;saveMeta();closeSheet();render();pull()};
+  document.getElementById('s-ok').onclick=go;i.onkeydown=e=>{if(e.key==='Enter')go()};
+  document.getElementById('s-skip').onclick=()=>{meta.skip=true;saveMeta();closeSheet();setSync('off','未同步（只存在這台）')};
+}
 
 let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2400)}
 function cabById(id){return state.cabinets.find(c=>c.id===id)}
@@ -218,7 +290,8 @@ function render(){
   const alerts=state.items.filter(i=>expState(i));
   let h=`<header class="top"><div class="skins"><span>換主題</span>${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
     <div class="room-row"><h1><span class="hl">${esc(state.room)}</span></h1>
-    <span class="stats">${state.cabinets.length} 個櫃子 · ${state.items.length} 種東西 · 共 ${total} 件</span></div>
+    <span class="room-meta"><span class="stats">${state.cabinets.length} 個櫃子 · ${state.items.length} 種東西 · 共 ${total} 件</span>
+    <button class="sync ${syncState.cls}" id="syncChip" type="button" title="點一下立即同步"><span class="dot"></span><span>${esc(syncState.txt)}</span></button></span></div>
     <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" type="search" placeholder="找東西：例如 護照、電池…" value="${esc(view.q)}" autocomplete="off"></label></header>`;
   if(state.sample)h+=`<div class="notice"><span>現在看到的是範例東西，先玩玩看。</span><button class="btn small" id="clearSample" type="button">清掉範例，從空房間開始</button></div>`;
@@ -237,6 +310,7 @@ function render(){
   const qi=document.getElementById('q');
   qi.addEventListener('input',()=>{view.q=qi.value;const p=qi.selectionStart;render();const n=document.getElementById('q');n.focus();try{n.setSelectionRange(p,p)}catch(e){}});
   bindCommon();
+  document.getElementById('syncChip').onclick=()=>{if(!meta.pw)pwSheet();else meta.dirty?push():pull()};
   app.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skin=b.dataset.skin;try{localStorage.setItem('alex-room-skin',skin)}catch(e){}applySkin();render()});
   const cs=document.getElementById('clearSample');
   if(cs)armable(cs,'再按一次：清空全部範例',()=>{state={room:state.room,cabinets:[],items:[],history:{}};save();render();toast('房間清空了，先新增一個櫃子吧')});
@@ -339,6 +413,7 @@ function itemSheet(it,pre){
 }
 document.getElementById('fab').onclick=()=>itemSheet(null);
 render();
+if(meta.pw)pull();else if(!meta.skip)pwSheet();else setSync('off','未同步（只存在這台）');
 })();
 </script>
 
