@@ -209,7 +209,7 @@ function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}
 let state=load()||sample();
 if(!state.history)state.history={};
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast('存不進去：空間可能滿了，刪掉幾張照片再試');return false}}
-function save(){const ok=saveLocal();if(ok){meta.dirty=true;saveMeta();schedulePush()}return ok}
+function save(){const ok=saveLocal();if(ok){meta.dirty=true;meta.needBackup=true;saveMeta();schedulePush();scheduleBackup()}return ok}
 
 /* ---------- 聯網同步（Google 試算表） ---------- */
 const SYNC_URL='https://script.google.com/macros/s/AKfycbzBHMpJu4cC3XOY2POR0_xrtkaJJEebkr0LRVxafdR3P_q-wqaPikrfHTwNCw4sfPqaGw/exec';
@@ -260,8 +260,20 @@ async function push(){
   finally{busy=false;if(pendingPush){pendingPush=false;push()}}
 }
 function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(push,1500)}
+/* 自動備份：停止操作 5 分鐘、或離開網頁時，把雲端資料備份一份 */
+const IDLE_MS=5*60*1000;let backupTimer;
+function scheduleBackup(){clearTimeout(backupTimer);backupTimer=setTimeout(()=>backup(),IDLE_MS)}
+async function backup(leaving){
+  if(!meta.pw||meta.skip||!meta.needBackup)return;
+  if(meta.dirty){if(!leaving){await push();if(meta.dirty){scheduleBackup();return}}else return}
+  const body=JSON.stringify({pw:meta.pw,action:'backup'});
+  if(leaving){try{navigator.sendBeacon(SYNC_URL,new Blob([body],{type:'text/plain'}));meta.needBackup=false;meta.lastBackup=Date.now();saveMeta()}catch(e){}return}
+  try{const res=await call({action:'backup'});if(res.ok){meta.needBackup=false;meta.lastBackup=res.time||Date.now();saveMeta()}}catch(e){scheduleBackup()}
+}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(meta.needBackup)scheduleBackup()},{passive:true}));
 window.addEventListener('online',()=>meta.dirty?push():pull());
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')meta.dirty?push():pull()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){meta.dirty?push():pull()}else backup(true)});
+window.addEventListener('pagehide',()=>backup(true));
 function pwSheet(msg){
   openSheet(`<h2>連上雲端同步</h2>
     <p style="margin:0;color:var(--muted);font-size:14px">輸入同步密碼後，手機、電腦都會看到同一份資料。第一次輸入的密碼會成為正式密碼，之後每台裝置都輸入同一個。</p>
@@ -422,7 +434,7 @@ function itemSheet(it,pre){
 }
 const VERSION='1.3';
 const CHANGELOG=[
-  ['1.3','2026-11-03',['新增「設定」：同步狀態、主題、房間名稱、備份與還原、更新日誌']],
+  ['1.3','2026-11-03',['新增「設定」：同步狀態、主題、房間名稱、備份與還原、更新日誌','自動備份：停止操作 5 分鐘或離開網頁時，自動備份到雲端硬碟，可從設定還原']],
   ['1.2','2026-11-03',['加入雲端同步：手機、電腦共用同一份資料','試算表「物品清單」分頁自動列出所有東西']],
   ['1.1','2026-11-03',['五種主題：糖果、海洋、森林、太空、簡約','櫃子可以選圖示']],
   ['1.0','2026-11-03',['第一版：新增櫃子、登記東西、搜尋、到期提醒、記住上次放哪']]
@@ -432,8 +444,10 @@ function settingsSheet(){
   openSheet(`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2>設定</h2><span class="ver">v${VERSION}</span></div>
     <section class="set-sec"><h3>☁️ 雲端同步</h3>
       <p>狀態：${esc(syncState.txt)}　·　上次同步：${fmtTime(meta.lastSync)}</p>
-      <div class="set-row">${meta.pw?`<button class="btn small" id="st-sync" type="button">立即同步</button><button class="btn small" id="st-logout" type="button">這台裝置登出同步</button>`
+      <p>自動備份：停止操作 5 分鐘、或離開網頁時，會自動存一份到雲端硬碟「Alex房間備份」資料夾（保留最近 30 份）。上次備份：${fmtTime(meta.lastBackup)}</p>
+      <div class="set-row">${meta.pw?`<button class="btn small" id="st-sync" type="button">立即同步</button><button class="btn small" id="st-cloud" type="button">看雲端備份</button><button class="btn small" id="st-logout" type="button">這台裝置登出同步</button>`
         :`<button class="btn small primary" id="st-login" type="button">輸入同步密碼</button>`}</div></section>
+    <div id="st-cloud-list" hidden></div>
     <section class="set-sec"><h3>🎨 主題</h3>
       <div class="skins">${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
       <p>主題只會改這台裝置，不影響別人。</p></section>
@@ -441,7 +455,7 @@ function settingsSheet(){
       <div class="set-row"><input id="st-room" maxlength="20" value="${esc(state.room)}" style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:16px">
       <button class="btn small" id="st-room-save" type="button">改名</button></div></section>
     <section class="set-sec"><h3>💾 備份與還原</h3>
-      <p>雲端已經會自動存，這是多一份保險：下載的檔案可以在任何時候還原回來。</p>
+      <p>除了雲端自動備份，也可以自己下載一份存在電腦裡。</p>
       <div class="set-row"><button class="btn small" id="st-dl" type="button">下載備份檔</button>
         <label class="btn small" style="cursor:pointer">從備份檔還原<input id="st-up" type="file" accept=".json,application/json" hidden></label></div>
       <div class="hint" id="st-up-hint" hidden></div></section>
@@ -453,6 +467,15 @@ function settingsSheet(){
   const $=id=>document.getElementById(id);
   $('st-close').onclick=()=>{closeSheet();render()};
   if($('st-sync'))$('st-sync').onclick=()=>{closeSheet();meta.dirty?push():pull()};
+  if($('st-cloud'))$('st-cloud').onclick=async()=>{const box=$('st-cloud-list');box.hidden=false;box.className='hint';box.textContent='讀取雲端備份中…';
+    try{const res=await call({action:'listBackups'});if(!res.ok){box.textContent=res.error||'讀不到備份';return}
+      if(!res.list.length){box.textContent='雲端還沒有備份，改過東西後過 5 分鐘就會有第一份';return}
+      box.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+res.list.map(b=>`<div class="set-row" style="justify-content:space-between"><span>${esc(fmtTime(b.time))}</span><button class="btn small" data-bk="${esc(b.id)}" type="button">還原這份</button></div>`).join('')+'</div>';
+      box.querySelectorAll('[data-bk]').forEach(btn=>armable(btn,'再按一次確認還原',async()=>{btn.textContent='還原中…';
+        try{const r2=await call({action:'getBackup',id:btn.dataset.bk});const d=r2.ok&&JSON.parse(r2.data);
+          if(!d||!Array.isArray(d.cabinets)){toast('這份備份讀不出來');return}
+          state=d;if(!state.history)state.history={};save();closeSheet();view.cab=null;render();toast('已從雲端備份還原')}catch(e){toast('還原失敗，請檢查網路')}}))}
+    catch(e){box.textContent='連不上網路'}};
   if($('st-login'))$('st-login').onclick=()=>pwSheet();
   if($('st-logout'))armable($('st-logout'),'再按一次：這台不再同步',()=>{meta.pw='';meta.skip=true;saveMeta();setSync('off','未同步（只存在這台）');settingsSheet();toast('這台裝置已登出同步')});
   sheet.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skin=b.dataset.skin;try{localStorage.setItem('alex-room-skin',skin)}catch(e){}applySkin();
