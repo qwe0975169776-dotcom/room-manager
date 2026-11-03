@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Alex 的房間收納</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one room — search on top, cabinets as labeled boxes; tap a box to open it. Labels look like label-maker tape. */
+:root{
+  --bg:#eceff3; --surface:#ffffff; --surface-2:#f6f8fa; --ink:#1c2530; --muted:#5d6a79; --line:#d3d9e0;
+  --accent:#16695f; --accent-ink:#ffffff; --warn:#b4540a; --warn-bg:#fdf0e3; --bad:#b42318; --bad-bg:#fdecea;
+  --shadow:0 1px 2px rgba(20,30,45,.06),0 4px 14px rgba(20,30,45,.06);
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#1a2129; --surface-2:#151b22; --ink:#e5eaf0; --muted:#94a1b0; --line:#2b3540;
+  --accent:#4cc2b2; --accent-ink:#0d1a18; --warn:#f0a05a; --warn-bg:#33240f; --bad:#ff8a7d; --bad-bg:#3a1915;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#1a2129; --surface-2:#151b22; --ink:#e5eaf0; --muted:#94a1b0; --line:#2b3540;
+  --accent:#4cc2b2; --accent-ink:#0d1a18; --warn:#f0a05a; --warn-bg:#33240f; --bad:#ff8a7d; --bad-bg:#3a1915;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+:root{--pattern:none;--pattern-size:auto;--radius:12px}
+
+/* 主題範本：每個主題固定一種配色（不跟深色模式切換） */
+:root[data-skin="candy"]{--bg:#fff3f8;--surface:#ffffff;--surface-2:#fff0f6;--ink:#4a2340;--muted:#9a6a8a;--line:#f6cfe0;
+  --accent:#ff4f9a;--accent-ink:#fff;--warn:#c2650a;--warn-bg:#fff1dc;--bad:#d6304a;--bad-bg:#ffe3e8;
+  --pattern:radial-gradient(circle,#ffd3e6 2.2px,transparent 2.8px),radial-gradient(circle,#c9f0e4 2.2px,transparent 2.8px);
+  --pattern-size:28px 28px;--radius:22px;--shadow:0 4px 0 #f6cfe0;color-scheme:light}
+:root[data-skin="forest"]{--bg:#f1f7e4;--surface:#fffdf2;--surface-2:#f6f9ea;--ink:#24361f;--muted:#5f7550;--line:#d4e2b8;
+  --accent:#3b9a2c;--accent-ink:#fff;--warn:#b25d07;--warn-bg:#fdf0d8;--bad:#c0392b;--bad-bg:#fbe5e1;
+  --pattern:repeating-linear-gradient(45deg,rgba(110,170,50,.08) 0 14px,transparent 14px 28px);
+  --radius:18px;--shadow:0 3px 0 #d4e2b8;color-scheme:light}
+:root[data-skin="ocean"]{--bg:#d9f3fa;--surface:#ffffff;--surface-2:#eefafd;--ink:#0b3a4f;--muted:#4c7a8c;--line:#bde3ee;
+  --accent:#0a9fc0;--accent-ink:#fff;--warn:#b5600c;--warn-bg:#fff0dc;--bad:#c93a3a;--bad-bg:#fde6e6;
+  --pattern:radial-gradient(circle at 30% 30%,rgba(255,255,255,.95) 3px,rgba(255,255,255,.35) 5px,transparent 6px),radial-gradient(circle at 70% 75%,rgba(255,255,255,.8) 2px,transparent 3.5px),linear-gradient(180deg,#e6f8fc,#bfe8f3);
+  --pattern-size:70px 70px,40px 40px,100% 100%;--radius:20px;--shadow:0 6px 18px rgba(10,110,140,.12);color-scheme:light}
+:root[data-skin="space"]{--bg:#15153a;--surface:#23234f;--surface-2:#1c1c44;--ink:#f3f1ff;--muted:#aeacdc;--line:#3a3a74;
+  --accent:#ffcd3c;--accent-ink:#1b1733;--warn:#ffb25e;--warn-bg:#3c2b16;--bad:#ff7d8c;--bad-bg:#40193a;
+  --pattern:radial-gradient(1.6px 1.6px at 20px 30px,#fff,transparent),radial-gradient(1px 1px at 90px 80px,#d6d8ff,transparent),radial-gradient(1.8px 1.8px at 150px 20px,#ffe9a8,transparent),radial-gradient(1px 1px at 60px 110px,#fff,transparent);
+  --pattern-size:180px 130px;--radius:16px;--shadow:0 0 0 1px #3a3a74,0 8px 24px rgba(0,0,0,.35);color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background-color:var(--bg);background-image:var(--pattern);background-size:var(--pattern-size);background-attachment:fixed;color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;min-height:100%}
+.skins{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.skins button{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 12px 4px 4px;font-size:14px}
+.skins button[aria-pressed="true"]{border-color:var(--accent);font-weight:700}
+.skins .sw{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+h1 .hl{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--accent) 28%,transparent) 62%);padding:0 4px}
+.cab .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cab .ico{font-size:36px;line-height:1}
+.cab{border-radius:var(--radius)!important;background:color-mix(in srgb,var(--tint,transparent) 13%,var(--surface))!important;border-color:color-mix(in srgb,var(--tint,var(--line)) 40%,var(--line))!important}
+.cab.add{background:transparent!important}
+.cab:hover{transform:translateY(-3px) rotate(-.6deg)!important}
+.item,.search,.notice,.empty{border-radius:calc(var(--radius) - 4px)!important}
+.btn{border-radius:99px!important}
+.sync{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 12px;font-size:13px;color:var(--muted)}
+.sync .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.ok .dot{background:#2fa36b}.sync.busy .dot{background:var(--accent);animation:pulse 1s infinite}
+.sync.off .dot{background:var(--warn)}.sync.err .dot{background:var(--bad)}
+@keyframes pulse{50%{opacity:.3}}
+.room-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gear{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 12px;font-size:13px;color:var(--ink)}
+.set-sec{display:flex;flex-direction:column;gap:8px;padding-block:12px;border-top:1px solid var(--line)}
+.set-sec h3{margin:0;font-size:15px;font-family:var(--f-display);font-weight:400}
+.set-sec p{margin:0;font-size:13px;color:var(--muted)}
+.set-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.log{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.log b{font-family:var(--f-mono);font-size:13px}
+.log ul{margin:2px 0 0;padding-left:20px;color:var(--muted)}
+.ver{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.icons{display:flex;gap:6px;flex-wrap:wrap}
+.icons button{font-size:24px;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2)}
+.icons button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
+.wrap{max-width:860px;margin:0 auto;padding-block:20px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* tape label */
+.tape{display:inline-flex;align-items:center;gap:8px;padding:3px 12px 3px 8px;border-radius:3px;
+  font-family:var(--f-display);font-size:16px;letter-spacing:.06em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+.tape .code{font-family:var(--f-mono);font-weight:600;font-size:13px;padding:0 6px;border-radius:2px;background:rgba(0,0,0,.14)}
+.t-black{background:#22262b;color:#f3f4f5}.t-yellow{background:#f3c623;color:#1d1a10}
+.t-blue{background:#2f6bd8;color:#fff}.t-green{background:#2f8a4e;color:#fff}
+.t-red{background:#d0443a;color:#fff}.t-white{background:#fbfbf8;color:#1d1d1d;box-shadow:inset 0 0 0 1px #c9ccd0}
+
+header.top{display:flex;flex-direction:column;gap:12px}
+.room-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0;letter-spacing:.02em}
+.stats{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 14px;box-shadow:var(--shadow)}
+.search svg{flex:none;color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;background:transparent;padding:13px 0;font-size:16px;outline:none}
+
+.notice{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  background:var(--surface-2);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--muted)}
+.remind{background:var(--warn-bg);border:0;color:var(--ink)}
+.remind b{color:var(--warn)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.cab{display:flex;flex-direction:column;gap:10px;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0;transition:transform .12s ease}
+.cab:hover{transform:translateY(-2px)}
+.cab .count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cab .peek{font-size:14px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em}
+.cab.add{align-items:center;justify-content:center;border-style:dashed;background:transparent;box-shadow:none;color:var(--muted);min-height:132px;font-size:15px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;font-size:14px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.btn.danger{color:var(--bad)}
+.btn.armed{background:var(--bad);color:#fff;border-color:var(--bad)}
+.btn.small{padding:5px 10px;font-size:13px}
+.link{border:0;background:none;color:var(--accent);padding:4px 0;font-size:14px}
+
+/* cabinet view */
+.cabhead{display:flex;flex-direction:column;gap:12px}
+.cabhead .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.cabhead .tape{font-size:22px;padding:6px 16px 6px 10px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group h3{margin:6px 0 0;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.08em;font-family:var(--f-mono)}
+.items{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left;width:100%}
+.item .ph{flex:none;width:48px;height:48px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden;
+  display:grid;place-items:center;color:var(--muted);font-family:var(--f-display);font-size:18px}
+.item .ph img{width:100%;height:100%;object-fit:cover}
+.item .body{flex:1;min-width:0;display:flex;flex-direction:column}
+.item .name{font-weight:500;overflow-wrap:anywhere}
+.item .meta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.item .qty{font-family:var(--f-mono);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;margin-left:6px;vertical-align:1px}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.bad{background:var(--bad-bg);color:var(--bad)}
+.empty{text-align:center;color:var(--muted);padding:32px 12px;border:1px dashed var(--line);border-radius:12px}
+
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+@media (min-width:640px){.overlay{align-items:center}.sheet{border-radius:16px}}
+.sheet h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:22px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px;color:var(--ink);min-width:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:13px;background:var(--surface-2);border-radius:8px;padding:8px 10px;color:var(--ink)}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors button{width:38px;height:28px;border-radius:4px;border:2px solid transparent}
+.colors button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+.photo-prev{display:flex;gap:10px;align-items:center}
+.photo-prev img{width:72px;height:72px;object-fit:cover;border-radius:8px}
+.actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:4px}
+.actions .right{display:flex;gap:8px;margin-left:auto}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:99px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+.fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;
+  border:0;border-radius:99px;background:var(--accent);color:var(--accent-ink);padding:14px 20px;font-size:15px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+@media (prefers-reduced-motion:reduce){.cab{transition:none}.cab:hover{transform:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<button class="fab" id="fab" type="button">＋ 放東西</button>
+<div class="toast" id="toast" hidden></div>
+<div class="overlay" id="overlay" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(function(){
+const KEY='alex-room-v1';
+const SKINS=[['candy','糖果','#fff3f8','#ff4f9a'],['ocean','海洋','#d9f3fa','#0a9fc0'],['forest','森林','#f1f7e4','#3b9a2c'],['space','太空','#15153a','#ffcd3c'],['plain','簡約','#eceff3','#16695f']];
+const TINT={black:'#22262b',yellow:'#f3c623',blue:'#2f6bd8',green:'#2f8a4e',red:'#d0443a',white:'#9aa3ad'};
+const ICONS=['📦','👕','👖','🧦','📚','✏️','🎒','🧸','🎮','⚽','🎨','🎻','🛏️','🧴','💊','🔌'];
+let skin='candy';try{skin=localStorage.getItem('alex-room-skin')||'candy'}catch(e){}
+function applySkin(){if(skin==='plain')document.documentElement.removeAttribute('data-skin');else document.documentElement.setAttribute('data-skin',skin)}
+applySkin();
+const TAPES=[['black','黑'],['yellow','黃'],['blue','藍'],['green','綠'],['red','紅'],['white','白']];
+const app=document.getElementById('app'),overlay=document.getElementById('overlay'),sheet=document.getElementById('sheet');
+let view={cab:null,q:''};
+
+function uid(){return Math.random().toString(36).slice(2,10)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function today(){const d=new Date();d.setHours(0,0,0,0);return d}
+function sample(){
+  const a=uid(),b=uid(),c=uid();
+  const soon=new Date(Date.now()+12*864e5).toISOString().slice(0,10);
+  return {room:'Alex 的房間',sample:true,history:{},
+    cabinets:[{id:a,code:'A',name:'衣櫃',tape:'red',icon:'👕'},{id:b,code:'B',name:'書桌抽屜',tape:'yellow',icon:'✏️'},{id:c,code:'C',name:'床底收納箱',tape:'blue',icon:'📦'}],
+    items:[
+      {id:uid(),cab:a,name:'冬季外套',spot:'吊衣區',qty:2,exp:'',note:'',photo:''},
+      {id:uid(),cab:a,name:'游泳毛巾',spot:'第2層',qty:3,exp:'',note:'',photo:''},
+      {id:uid(),cab:b,name:'行動電源',spot:'第1格',qty:1,exp:'',note:'白色那顆比較大',photo:''},
+      {id:uid(),cab:b,name:'護照',spot:'第2格',qty:1,exp:'',note:'放在透明夾裡',photo:''},
+      {id:uid(),cab:b,name:'AA 電池',spot:'第1格',qty:8,exp:'',note:'',photo:''},
+      {id:uid(),cab:c,name:'防曬乳',spot:'',qty:1,exp:soon,note:'',photo:''},
+      {id:uid(),cab:c,name:'露營燈',spot:'',qty:1,exp:'',note:'',photo:''}
+    ]};
+}
+function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return null}
+let state=load()||sample();
+if(!state.history)state.history={};
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));return true}catch(e){toast('存不進去：空間可能滿了，刪掉幾張照片再試');return false}}
+function save(){const ok=saveLocal();if(ok){meta.dirty=true;saveMeta();schedulePush()}return ok}
+
+/* ---------- 聯網同步（Google 試算表） ---------- */
+const SYNC_URL='https://script.google.com/macros/s/AKfycbzBHMpJu4cC3XOY2POR0_xrtkaJJEebkr0LRVxafdR3P_q-wqaPikrfHTwNCw4sfPqaGw/exec';
+const MKEY=KEY+'-sync';
+let meta={pw:'',base:0,dirty:false,skip:false};
+try{Object.assign(meta,JSON.parse(localStorage.getItem(MKEY)||'{}'))}catch(e){}
+function saveMeta(){try{localStorage.setItem(MKEY,JSON.stringify(meta))}catch(e){}}
+let syncState={cls:'',txt:'尚未同步'},pushTimer,busy=false,pendingPush=false;
+function setSync(cls,txt){syncState={cls,txt};if(cls==='ok'){meta.lastSync=Date.now();saveMeta()}const el=document.getElementById('syncChip');if(el){el.className='sync '+cls;el.querySelector('span:last-child').textContent=txt}}
+async function call(body){
+  const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify(Object.assign({pw:meta.pw},body))});
+  return r.json();
+}
+function adopt(res){
+  if(res.data){try{const d=JSON.parse(res.data);if(d&&d.cabinets){state=d;if(!state.history)state.history={};saveLocal()}}catch(e){}}
+  meta.base=res.updated||0;meta.dirty=false;saveMeta();
+  if(overlay.hidden)render();
+}
+function handleErr(res){
+  if(res&&/密碼/.test(res.error||'')){meta.pw='';saveMeta();setSync('err','密碼錯誤');pwSheet(res.error);return}
+  setSync('err',(res&&res.error)||'同步失敗');
+}
+async function pull(){
+  if(!meta.pw||busy)return;
+  if(!navigator.onLine){setSync('off','離線中，資料先存在這台');return}
+  busy=true;setSync('busy','同步中…');
+  try{
+    const res=await call({action:'load'});
+    if(!res.ok){handleErr(res);return}
+    if(!res.data){meta.dirty=true;busy=false;await push();return}
+    if(res.updated===meta.base){ if(meta.dirty){busy=false;await push();return} }
+    else{ if(meta.dirty)toast('別台裝置有更新，已換成最新資料'); adopt(res) }
+    setSync('ok','已同步');
+  }catch(e){setSync('off','連不上網路，稍後再同步')}
+  finally{busy=false}
+}
+async function push(){
+  if(!meta.pw||meta.skip)return;
+  if(busy){pendingPush=true;return}
+  if(!navigator.onLine){setSync('off','離線中，連上網會自動上傳');return}
+  busy=true;setSync('busy','上傳中…');
+  try{
+    const res=await call({action:'save',base:meta.base,data:JSON.stringify(state)});
+    if(res.ok){meta.base=res.updated;meta.dirty=false;saveMeta();setSync('ok','已同步')}
+    else if(res.conflict){toast('別台裝置剛改過，已換成最新資料');adopt(res);setSync('ok','已同步')}
+    else handleErr(res);
+  }catch(e){setSync('off','連不上網路，稍後再上傳')}
+  finally{busy=false;if(pendingPush){pendingPush=false;push()}}
+}
+function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(push,1500)}
+window.addEventListener('online',()=>meta.dirty?push():pull());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')meta.dirty?push():pull()});
+function pwSheet(msg){
+  openSheet(`<h2>連上雲端同步</h2>
+    <p style="margin:0;color:var(--muted);font-size:14px">輸入同步密碼後，手機、電腦都會看到同一份資料。第一次輸入的密碼會成為正式密碼，之後每台裝置都輸入同一個。</p>
+    ${msg?`<div class="hint" style="color:var(--bad)">${esc(msg)}，請再輸入一次</div>`:''}
+    <label class="field">同步密碼（至少 4 個字）<input id="s-pw" type="password" autocomplete="current-password"></label>
+    <div class="actions"><button class="btn" id="s-skip" type="button">先不要同步</button>
+      <span class="right"><button class="btn primary" id="s-ok" type="button">連線</button></span></div>`);
+  const i=document.getElementById('s-pw');setTimeout(()=>i.focus(),50);
+  const go=()=>{const v=i.value.trim();if(v.length<4){toast('密碼至少 4 個字');i.focus();return}
+    meta.pw=v;meta.skip=false;saveMeta();closeSheet();render();pull()};
+  document.getElementById('s-ok').onclick=go;i.onkeydown=e=>{if(e.key==='Enter')go()};
+  document.getElementById('s-skip').onclick=()=>{meta.skip=true;saveMeta();closeSheet();setSync('off','未同步（只存在這台）')};
+}
+
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2400)}
+function cabById(id){return state.cabinets.find(c=>c.id===id)}
+function tapeHTML(c,big){return `<span class="tape t-${c.tape}"><span class="code">${esc(c.code)}</span>${esc(c.name)}</span>`}
+function nextCode(){const used=new Set(state.cabinets.map(c=>c.code));for(let i=0;i<26;i++){const l=String.fromCharCode(65+i);if(!used.has(l))return l}return String(state.cabinets.length+1)}
+function expState(it){if(!it.exp)return null;const d=new Date(it.exp+'T00:00:00');const days=Math.round((d-today())/864e5);
+  if(days<0)return{cls:'bad',txt:'已過期'};if(days<=30)return{cls:'warn',txt:days===0?'今天到期':days+' 天後到期'};return null}
+function whereText(it){const c=cabById(it.cab);return c?`${c.code} ${c.name}${it.spot?' · '+it.spot:''}`:'未分類'}
+function itemHTML(it,showWhere){const e=expState(it);
+  return `<button class="item" type="button" data-item="${it.id}">
+    <span class="ph">${it.photo?`<img src="${it.photo}" alt="">`:esc((it.name||'?').slice(0,1))}</span>
+    <span class="body"><span class="name">${esc(it.name)}${e?`<span class="badge ${e.cls}">${e.txt}</span>`:''}</span>
+    <span class="meta">${showWhere?'在 '+esc(whereText(it)):''}${showWhere&&it.note?' · ':''}${it.note?esc(it.note):''}</span></span>
+    <span class="qty">×${esc(it.qty||1)}</span></button>`}
+
+function render(){
+  document.getElementById('fab').hidden=false;
+  if(view.cab&&cabById(view.cab))return renderCab();
+  view.cab=null;
+  const q=view.q.trim().toLowerCase();
+  const total=state.items.reduce((s,i)=>s+(+i.qty||1),0);
+  const alerts=state.items.filter(i=>expState(i));
+  let h=`<header class="top"><div class="room-row"><h1><span class="hl">${esc(state.room)}</span></h1>
+    <span class="room-meta"><span class="stats">${state.cabinets.length} 個櫃子 · ${state.items.length} 種東西 · 共 ${total} 件</span>
+    <button class="sync ${syncState.cls}" id="syncChip" type="button" title="點一下立即同步"><span class="dot"></span><span>${esc(syncState.txt)}</span></button>
+    <button class="gear" id="gear" type="button">⚙️ 設定</button></span></div>
+    <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="找東西：例如 護照、電池…" value="${esc(view.q)}" autocomplete="off"></label></header>`;
+  if(state.sample)h+=`<div class="notice"><span>現在看到的是範例東西，先玩玩看。</span><button class="btn small" id="clearSample" type="button">清掉範例，從空房間開始</button></div>`;
+  if(q){
+    const res=state.items.filter(i=>(i.name+' '+(i.note||'')+' '+(i.spot||'')).toLowerCase().includes(q));
+    h+= res.length?`<div class="items">${res.map(i=>itemHTML(i,true)).join('')}</div>`
+      :`<div class="empty">房間裡找不到「${esc(view.q)}」<br><button class="link" id="addFromQ" type="button">把「${esc(view.q)}」登記進來</button></div>`;
+  }else{
+    if(alerts.length)h+=`<div class="notice remind"><span><b>提醒</b>　${alerts.map(i=>`${esc(i.name)}（${expState(i).txt}）`).join('、')}</span></div>`;
+    h+=`<div class="grid">${state.cabinets.map(c=>{const its=state.items.filter(i=>i.cab===c.id);
+      return `<button class="cab" type="button" data-cab="${c.id}" style="--tint:${TINT[c.tape]||'#888'}"><span class="top-row"><span class="ico">${c.icon||'📦'}</span><span class="count">${its.length} 種東西</span></span>${tapeHTML(c)}
+      <span class="peek">${its.length?its.map(i=>esc(i.name)).join('、'):'還是空的'}</span></button>`}).join('')}
+      <button class="cab add" type="button" id="addCab">＋ 新增櫃子</button></div>`;
+  }
+  app.innerHTML=h;
+  const qi=document.getElementById('q');
+  qi.addEventListener('input',()=>{view.q=qi.value;const p=qi.selectionStart;render();const n=document.getElementById('q');n.focus();try{n.setSelectionRange(p,p)}catch(e){}});
+  bindCommon();
+  document.getElementById('syncChip').onclick=()=>{if(!meta.pw)pwSheet();else meta.dirty?push():pull()};
+  document.getElementById('gear').onclick=settingsSheet;
+  const cs=document.getElementById('clearSample');
+  if(cs)armable(cs,'再按一次：清空全部範例',()=>{state={room:state.room,cabinets:[],items:[],history:{}};save();render();toast('房間清空了，先新增一個櫃子吧')});
+  const af=document.getElementById('addFromQ');if(af)af.onclick=()=>itemSheet(null,{name:view.q});
+  const ac=document.getElementById('addCab');if(ac)ac.onclick=()=>cabSheet(null);
+}
+function renderCab(){
+  const c=cabById(view.cab);const its=state.items.filter(i=>i.cab===c.id);
+  const groups={};its.forEach(i=>{(groups[i.spot||'']=groups[i.spot||'']||[]).push(i)});
+  const keys=Object.keys(groups).sort((a,b)=>a===''?1:b===''?-1:a.localeCompare(b,'zh-Hant',{numeric:true}));
+  let h=`<div class="cabhead"><div class="bar"><button class="link" id="back" type="button">← 回到${esc(state.room)}</button>
+    <button class="btn small" id="editCab" type="button">改櫃子名稱／圖示／顏色</button></div><div style="display:flex;align-items:center;gap:12px"><span style="font-size:44px;line-height:1">${c.icon||'📦'}</span>${tapeHTML(c)}</div></div>`;
+  h+= its.length? keys.map(k=>`<div class="group"><h3>${k?esc(k):'沒有指定位置'}</h3><div class="items">${groups[k].map(i=>itemHTML(i,false)).join('')}</div></div>`).join('')
+    :`<div class="empty">這個櫃子還是空的<br><button class="link" id="addHere" type="button">放第一樣東西進去</button></div>`;
+  app.innerHTML=h;
+  document.getElementById('back').onclick=()=>{view.cab=null;render()};
+  document.getElementById('editCab').onclick=()=>cabSheet(c);
+  const ah=document.getElementById('addHere');if(ah)ah.onclick=()=>itemSheet(null,{cab:c.id});
+  bindCommon();
+}
+function bindCommon(){
+  app.querySelectorAll('[data-cab]').forEach(b=>b.onclick=()=>{view.cab=b.dataset.cab;view.q='';render();window.scrollTo(0,0)});
+  app.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>itemSheet(state.items.find(i=>i.id===b.dataset.item)));
+}
+function armable(btn,armedText,fn){const orig=btn.textContent;let t;
+  btn.onclick=()=>{if(btn.classList.contains('armed')){clearTimeout(t);fn();return}
+    btn.classList.add('armed');btn.textContent=armedText;t=setTimeout(()=>{btn.classList.remove('armed');btn.textContent=orig},3500)}}
+function openSheet(html){sheet.innerHTML=html;overlay.hidden=false;document.getElementById('fab').hidden=true}
+function closeSheet(){overlay.hidden=true;sheet.innerHTML='';document.getElementById('fab').hidden=false}
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!overlay.hidden)closeSheet()});
+
+function cabSheet(c){
+  const isNew=!c;let icon=c&&c.icon||'📦';let tape=c?c.tape:TAPES[state.cabinets.length%TAPES.length][0];
+  const n=isNew?0:state.items.filter(i=>i.cab===c.id).length;
+  openSheet(`<h2>${isNew?'新增櫃子':'修改櫃子'}</h2>
+    <label class="field">櫃子名稱<input id="c-name" maxlength="20" placeholder="例如：衣櫃、書架、床頭櫃" value="${c?esc(c.name):''}"></label>
+    <div class="field">圖示<div class="icons" id="c-icons">${ICONS.map(i=>`<button type="button" data-i="${i}" aria-pressed="${i===icon}">${i}</button>`).join('')}</div></div>
+    <div class="field">標籤顏色<div class="colors" id="c-colors">${TAPES.map(([k,l])=>`<button type="button" class="t-${k}" data-t="${k}" aria-label="${l}色" aria-pressed="${k===tape}"></button>`).join('')}</div></div>
+    <div class="field">預覽<div id="c-prev"></div></div>
+    <div class="actions">${isNew?'':`<button class="btn danger" id="c-del" type="button">刪除櫃子</button>`}
+      <span class="right"><button class="btn" id="c-cancel" type="button">取消</button><button class="btn primary" id="c-save" type="button">儲存</button></span></div>`);
+  const nm=document.getElementById('c-name'),pv=document.getElementById('c-prev');
+  const code=c?c.code:nextCode();
+  const upd=()=>pv.innerHTML=tapeHTML({code,name:nm.value||'櫃子名稱',tape});upd();nm.oninput=upd;
+  document.getElementById('c-colors').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;tape=b.dataset.t;
+    document.querySelectorAll('#c-colors button').forEach(x=>x.setAttribute('aria-pressed',x===b));upd()};
+  document.getElementById('c-icons').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;icon=b.dataset.i;
+    document.querySelectorAll('#c-icons button').forEach(x=>x.setAttribute('aria-pressed',x===b))};
+  document.getElementById('c-cancel').onclick=closeSheet;
+  document.getElementById('c-save').onclick=()=>{const name=nm.value.trim();if(!name){nm.focus();toast('請先取個櫃子名稱');return}
+    if(isNew){const nc={id:uid(),code,name,tape,icon};state.cabinets.push(nc);view.cab=nc.id}else{c.name=name;c.tape=tape;c.icon=icon}
+    save();closeSheet();render();toast(isNew?`已新增 ${code} ${name}`:'已更新')};
+  const del=document.getElementById('c-del');
+  if(del)armable(del,n?`再按一次：連同 ${n} 樣東西一起刪`:'再按一次確認刪除',()=>{
+    state.items=state.items.filter(i=>i.cab!==c.id);state.cabinets=state.cabinets.filter(x=>x.id!==c.id);view.cab=null;save();closeSheet();render();toast('櫃子已刪除')});
+  if(isNew)setTimeout(()=>nm.focus(),50);
+}
+
+function itemSheet(it,pre){
+  if(!state.cabinets.length){toast('先新增一個櫃子，才有地方放東西');cabSheet(null);return}
+  const isNew=!it;pre=pre||{};
+  const d=it?{...it}:{name:pre.name||'',cab:pre.cab||view.cab||state.cabinets[0].id,spot:'',qty:1,exp:'',note:'',photo:''};
+  let photo=d.photo||'';
+  openSheet(`<h2>${isNew?'放東西進房間':'編輯東西'}</h2>
+    <label class="field">東西名稱<input id="f-name" maxlength="40" placeholder="例如：護照、充電線" value="${esc(d.name)}"></label>
+    <div class="hint" id="f-hint" hidden></div>
+    <div class="row2"><label class="field">放在哪個櫃子<select id="f-cab">${state.cabinets.map(c=>`<option value="${c.id}"${c.id===d.cab?' selected':''}>${esc(c.code+' '+c.name)}</option>`).join('')}</select></label>
+      <label class="field">櫃子裡的位置（可空白）<input id="f-spot" list="f-spots" maxlength="20" placeholder="第2層、左邊抽屜…" value="${esc(d.spot)}"><datalist id="f-spots"></datalist></label></div>
+    <div class="row2"><label class="field">數量<input id="f-qty" type="number" min="0" inputmode="numeric" value="${esc(d.qty)}"></label>
+      <label class="field">到期日（食品、藥品才需要）<input id="f-exp" type="date" value="${esc(d.exp)}"></label></div>
+    <label class="field">備註<input id="f-note" maxlength="60" placeholder="例如：藍色袋子裡" value="${esc(d.note)}"></label>
+    <div class="field">照片（可不放）<div class="photo-prev"><span id="f-pv">${photo?`<img src="${photo}" alt="">`:''}</span>
+      <input id="f-photo" type="file" accept="image/*">${photo?'<button class="link" id="f-rmph" type="button">拿掉照片</button>':''}</div></div>
+    <div class="actions">${isNew?'':`<button class="btn danger" id="f-del" type="button">刪除</button>`}
+      <span class="right"><button class="btn" id="f-cancel" type="button">取消</button><button class="btn primary" id="f-save" type="button">儲存</button></span></div>`);
+  const $=id=>document.getElementById(id);
+  const fillSpots=()=>{const set=new Set(state.items.filter(i=>i.cab===$('f-cab').value&&i.spot).map(i=>i.spot));
+    ['第1層','第2層','第3層','上層','下層'].forEach(s=>set.add(s));$('f-spots').innerHTML=[...set].map(s=>`<option value="${esc(s)}">`).join('')};
+  fillSpots();$('f-cab').onchange=fillSpots;
+  const hint=()=>{const h=$('f-hint');if(!isNew){h.hidden=true;return}const n=$('f-name').value.trim();const p=n&&state.history[n];
+    if(p&&cabById(p.cab)){const c=cabById(p.cab);h.innerHTML=`上次「${esc(n)}」放在 <b>${esc(c.code+' '+c.name)}${p.spot?' · '+esc(p.spot):''}</b>　<button class="link" id="f-use" type="button">放回原位</button>`;h.hidden=false;
+      $('f-use').onclick=()=>{$('f-cab').value=p.cab;fillSpots();$('f-spot').value=p.spot||''}}else h.hidden=true};
+  $('f-name').oninput=hint;hint();
+  $('f-photo').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
+    const m=480,s=Math.min(1,m/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);photo=cv.toDataURL('image/jpeg',0.7);$('f-pv').innerHTML=`<img src="${photo}" alt="">`};img.src=r.result};r.readAsDataURL(f)};
+  if($('f-rmph'))$('f-rmph').onclick=()=>{photo='';$('f-pv').innerHTML='';$('f-rmph').remove()};
+  $('f-cancel').onclick=closeSheet;
+  $('f-save').onclick=()=>{const name=$('f-name').value.trim();if(!name){$('f-name').focus();toast('請輸入東西名稱');return}
+    const rec={name,cab:$('f-cab').value,spot:$('f-spot').value.trim(),qty:Math.max(0,parseInt($('f-qty').value,10)||0)||1,exp:$('f-exp').value,note:$('f-note').value.trim(),photo};
+    if($('f-qty').value==='0')rec.qty=0;
+    const backup=JSON.stringify(state);
+    if(isNew)state.items.push({id:uid(),...rec});else Object.assign(it,rec);
+    state.history[name]={cab:rec.cab,spot:rec.spot};
+    if(!save()){state=JSON.parse(backup);return}
+    closeSheet();render();const c=cabById(rec.cab);toast(`已放進 ${c.code} ${c.name}`)};
+  const del=$('f-del');if(del)armable(del,'再按一次確認刪除',()=>{state.items=state.items.filter(i=>i.id!==it.id);save();closeSheet();render();toast('已刪除')});
+  if(isNew&&!d.name)setTimeout(()=>$('f-name').focus(),50);
+}
+const VERSION='1.3';
+const CHANGELOG=[
+  ['1.3','2026-11-03',['新增「設定」：同步狀態、主題、房間名稱、備份與還原、更新日誌']],
+  ['1.2','2026-11-03',['加入雲端同步：手機、電腦共用同一份資料','試算表「物品清單」分頁自動列出所有東西']],
+  ['1.1','2026-11-03',['五種主題：糖果、海洋、森林、太空、簡約','櫃子可以選圖示']],
+  ['1.0','2026-11-03',['第一版：新增櫃子、登記東西、搜尋、到期提醒、記住上次放哪']]
+];
+function fmtTime(t){if(!t)return'還沒有';const d=new Date(t);return d.toLocaleDateString('zh-TW')+' '+d.toTimeString().slice(0,5)}
+function settingsSheet(){
+  openSheet(`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2>設定</h2><span class="ver">v${VERSION}</span></div>
+    <section class="set-sec"><h3>☁️ 雲端同步</h3>
+      <p>狀態：${esc(syncState.txt)}　·　上次同步：${fmtTime(meta.lastSync)}</p>
+      <div class="set-row">${meta.pw?`<button class="btn small" id="st-sync" type="button">立即同步</button><button class="btn small" id="st-logout" type="button">這台裝置登出同步</button>`
+        :`<button class="btn small primary" id="st-login" type="button">輸入同步密碼</button>`}</div></section>
+    <section class="set-sec"><h3>🎨 主題</h3>
+      <div class="skins">${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
+      <p>主題只會改這台裝置，不影響別人。</p></section>
+    <section class="set-sec"><h3>🏠 房間名稱</h3>
+      <div class="set-row"><input id="st-room" maxlength="20" value="${esc(state.room)}" style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:16px">
+      <button class="btn small" id="st-room-save" type="button">改名</button></div></section>
+    <section class="set-sec"><h3>💾 備份與還原</h3>
+      <p>雲端已經會自動存，這是多一份保險：下載的檔案可以在任何時候還原回來。</p>
+      <div class="set-row"><button class="btn small" id="st-dl" type="button">下載備份檔</button>
+        <label class="btn small" style="cursor:pointer">從備份檔還原<input id="st-up" type="file" accept=".json,application/json" hidden></label></div>
+      <div class="hint" id="st-up-hint" hidden></div></section>
+    <section class="set-sec"><h3>🗑️ 清空房間</h3>
+      <p>刪掉所有櫃子和東西（雲端也會一起清空）。</p>
+      <div class="set-row"><button class="btn small danger" id="st-clear" type="button">清空全部</button></div></section>
+    <section class="set-sec"><h3>📝 更新日誌</h3><div class="log">${CHANGELOG.map(([v,d,list])=>`<div><b>v${v}</b>　<span class="ver">${d}</span><ul>${list.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div></section>
+    <div class="actions"><span class="right"><button class="btn primary" id="st-close" type="button">完成</button></span></div>`);
+  const $=id=>document.getElementById(id);
+  $('st-close').onclick=()=>{closeSheet();render()};
+  if($('st-sync'))$('st-sync').onclick=()=>{closeSheet();meta.dirty?push():pull()};
+  if($('st-login'))$('st-login').onclick=()=>pwSheet();
+  if($('st-logout'))armable($('st-logout'),'再按一次：這台不再同步',()=>{meta.pw='';meta.skip=true;saveMeta();setSync('off','未同步（只存在這台）');settingsSheet();toast('這台裝置已登出同步')});
+  sheet.querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skin=b.dataset.skin;try{localStorage.setItem('alex-room-skin',skin)}catch(e){}applySkin();
+    sheet.querySelectorAll('[data-skin]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+  $('st-room-save').onclick=()=>{const v=$('st-room').value.trim();if(!v){toast('名稱不能空白');return}state.room=v;save();toast('房間改名為「'+v+'」')};
+  $('st-dl').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,1)],{type:'application/json'});const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='Alex房間備份-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast('備份檔已下載')};
+  $('st-up').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{let d;
+    try{d=JSON.parse(rd.result)}catch(err){toast('這不是備份檔');return}
+    if(!d||!Array.isArray(d.cabinets)||!Array.isArray(d.items)){toast('這不是 Alex 房間的備份檔');return}
+    const h=$('st-up-hint');h.hidden=false;h.innerHTML=`備份裡有 ${d.cabinets.length} 個櫃子、${d.items.length} 種東西，會取代現在的全部資料。　<button class="btn small danger" id="st-up-ok" type="button">確定還原</button>`;
+    $('st-up-ok').onclick=()=>{state=d;if(!state.history)state.history={};save();closeSheet();render();toast('已從備份還原')}};rd.readAsText(f)};
+  armable($('st-clear'),'再按一次：真的全部清空',()=>{state={room:state.room,cabinets:[],items:[],history:{}};save();closeSheet();view.cab=null;render();toast('房間清空了')});
+}
+document.getElementById('fab').onclick=()=>itemSheet(null);
+render();
+if(meta.pw)pull();else if(!meta.skip)pwSheet();else setSync('off','未同步（只存在這台）');
+})();
+</script>
+
+</body>
+</html>
