@@ -245,6 +245,7 @@ async function pull(){
     setSync('ok','已同步');
   }catch(e){setSync('off','連不上網路，稍後再同步')}
   finally{busy=false}
+  if(!meta.dirty)importInbox();
 }
 async function push(){
   if(!meta.pw||meta.skip)return;
@@ -260,6 +261,39 @@ async function push(){
   finally{busy=false;if(pendingPush){pendingPush=false;push()}}
 }
 function schedulePush(){clearTimeout(pushTimer);pushTimer=setTimeout(push,1500)}
+/* ---------- 待加入清單：從 Google 試算表「待加入」工作表自動放進櫃子 ---------- */
+const INBOX_SHEET_ID='1d3O1WPVxDjUyNmMnAIp0017YkmL27xau_4IC4Rqctnk';
+let inboxBusy=false;
+function readInbox(){return new Promise((ok,bad)=>{
+  const cb='__inbox'+Date.now();const sc=document.createElement('script');
+  const done=()=>{delete window[cb];sc.remove();clearTimeout(t)};
+  const t=setTimeout(()=>{done();bad(new Error('timeout'))},10000);
+  window[cb]=r=>{done();ok(r)};sc.onerror=()=>{done();bad(new Error('load'))};
+  sc.src=`https://docs.google.com/spreadsheets/d/${INBOX_SHEET_ID}/gviz/tq?headers=1&sheet=${encodeURIComponent('待加入')}&tqx=out:json;responseHandler:${cb}&_=${Date.now()}`;
+  document.head.appendChild(sc)})}
+function findCab(v){v=String(v||'').trim().toLowerCase();if(!v)return null;
+  return state.cabinets.find(c=>String(c.code).toLowerCase()===v)||state.cabinets.find(c=>c.name.toLowerCase()===v)||state.cabinets.find(c=>c.name.toLowerCase().includes(v))}
+async function importInbox(manual){
+  if(inboxBusy)return;inboxBusy=true;
+  try{
+    const res=await readInbox();
+    if(!res||res.status!=='ok'){if(manual)toast('讀不到「待加入」清單');return}
+    if(!state.imported)state.imported=[];
+    const val=c=>c&&c.v!=null?String(c.v).trim():'';
+    let added=0,miss=0,where=new Set();
+    for(const row of (res.table.rows||[])){
+      const c=row.c||[];const id=val(c[0]),name=val(c[2]);
+      if(!id||!name||state.imported.includes(id))continue;
+      const cab=findCab(val(c[1]));if(!cab){miss++;continue}
+      const qty=Math.max(1,parseInt(val(c[3]))||1),spot=val(c[4]),note=val(c[5]);
+      state.items.push({id:uid(),cab:cab.id,name,spot,qty,exp:'',note,photo:''});
+      state.history[name]={cab:cab.id,spot};state.imported.push(id);added++;where.add(cab.code);
+    }
+    if(added){save();if(overlay.hidden)render();toast(`📥 從待加入清單放進 ${added} 樣東西（${[...where].join('、')} 櫃）`)}
+    else if(manual)toast(miss?`有 ${miss} 樣找不到櫃子，沒放進去`:'待加入清單沒有新東西');
+  }catch(e){if(manual)toast('讀不到「待加入」清單，請檢查網路')}
+  finally{inboxBusy=false}
+}
 /* 自動備份：停止操作 5 分鐘、或離開網頁時，把雲端資料備份一份 */
 const IDLE_MS=5*60*1000;let backupTimer;
 function scheduleBackup(){clearTimeout(backupTimer);backupTimer=setTimeout(()=>backup(),IDLE_MS)}
@@ -432,8 +466,9 @@ function itemSheet(it,pre){
   const del=$('f-del');if(del)armable(del,'再按一次確認刪除',()=>{state.items=state.items.filter(i=>i.id!==it.id);save();closeSheet();render();toast('已刪除')});
   if(isNew&&!d.name)setTimeout(()=>$('f-name').focus(),50);
 }
-const VERSION='1.3';
+const VERSION='1.4';
 const CHANGELOG=[
+  ['1.4','2026-11-19',['新增「待加入清單」：Claude 寫進試算表的東西，網頁打開時會自動放進對應的櫃子','設定裡可以按「現在檢查待加入」']],
   ['1.3','2026-11-03',['新增「設定」：同步狀態、主題、房間名稱、備份與還原、更新日誌','自動備份：停止操作 5 分鐘或離開網頁時，自動備份到雲端硬碟，可從設定還原']],
   ['1.2','2026-11-03',['加入雲端同步：手機、電腦共用同一份資料','試算表「物品清單」分頁自動列出所有東西']],
   ['1.1','2026-11-03',['五種主題：糖果、海洋、森林、太空、簡約','櫃子可以選圖示']],
@@ -448,6 +483,9 @@ function settingsSheet(){
       <div class="set-row">${meta.pw?`<button class="btn small" id="st-sync" type="button">立即同步</button><button class="btn small" id="st-cloud" type="button">看雲端備份</button><button class="btn small" id="st-logout" type="button">這台裝置登出同步</button>`
         :`<button class="btn small primary" id="st-login" type="button">輸入同步密碼</button>`}</div></section>
     <div id="st-cloud-list" hidden></div>
+    <section class="set-sec"><h3>📥 待加入清單</h3>
+      <p>Claude 會把東西寫進 Google 試算表「待加入」工作表，網頁打開或同步時會自動放進對應的櫃子（同一樣不會放兩次）。</p>
+      <div class="set-row"><button class="btn small" id="st-inbox" type="button">現在檢查待加入</button></div></section>
     <section class="set-sec"><h3>🎨 主題</h3>
       <div class="skins">${SKINS.map(([k,l,b,a])=>`<button type="button" data-skin="${k}" aria-pressed="${k===skin}"><span class="sw" style="background:linear-gradient(135deg,${b} 50%,${a} 50%)"></span>${l}</button>`).join('')}</div>
       <p>主題只會改這台裝置，不影響別人。</p></section>
@@ -466,6 +504,7 @@ function settingsSheet(){
     <div class="actions"><span class="right"><button class="btn primary" id="st-close" type="button">完成</button></span></div>`);
   const $=id=>document.getElementById(id);
   $('st-close').onclick=()=>{closeSheet();render()};
+  $('st-inbox').onclick=()=>{closeSheet();importInbox(true)};
   if($('st-sync'))$('st-sync').onclick=()=>{closeSheet();meta.dirty?push():pull()};
   if($('st-cloud'))$('st-cloud').onclick=async()=>{const box=$('st-cloud-list');box.hidden=false;box.className='hint';box.textContent='讀取雲端備份中…';
     try{const res=await call({action:'listBackups'});if(!res.ok){box.textContent=res.error||'讀不到備份';return}
@@ -493,7 +532,7 @@ function settingsSheet(){
 }
 document.getElementById('fab').onclick=()=>itemSheet(null);
 render();
-if(meta.pw)pull();else if(!meta.skip)pwSheet();else setSync('off','未同步（只存在這台）');
+if(meta.pw)pull();else{if(!meta.skip)pwSheet();else setSync('off','未同步（只存在這台）');importInbox()}
 })();
 </script>
 
